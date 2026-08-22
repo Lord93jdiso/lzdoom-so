@@ -24,6 +24,12 @@ extern "C" {
 */
 int  lzdoom_main(int argc, const char** argv, const char* files_dir);
 
+/*
+ * Sets the writable game dir BEFORE launching via SDLActivity/SDL_main.
+ * Also sets HOME/chdir there.
+ */
+void lzdoom_set_files_dir(const char* files_dir);
+
 /* Asks the engine to shut down (thread-safe). */
 void lzdoom_request_exit(void);
 

@@ -25,6 +25,26 @@ static std::vector<char*> g_argStorage;
 extern "C"
 {
 
+// Files dir remembered for the SDL_main entry point (set by the host app
+// before SDL starts the engine thread).
+static std::string g_filesDir;
+
+__attribute__((visibility("default")))
+void lzdoom_set_files_dir(const char* dir)
+{
+	g_filesDir = (dir != nullptr) ? dir : "";
+	setenv("HOME", g_filesDir.c_str(), 1);
+	chdir(g_filesDir.c_str());
+}
+
+/* Entry point for stock SDLActivity: dlsym(SDL_main) finds this. */
+__attribute__((visibility("default")))
+int SDL_main(int argc, char** argv)
+{
+	return lzdoom_main(argc, argv, g_filesDir.c_str());
+}
+
+__attribute__((visibility("default")))
 __attribute__((visibility("default")))
 int lzdoom_main(int argc, const char** argv, const char* files_dir)
 {
