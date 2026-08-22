@@ -5,6 +5,7 @@
 #ifdef __ANDROID__
 
 #define _GNU_SOURCE
+#include "fluidsynth_priv.h" /* provides FLUID_ARRAY/FLUID_FREE used by the stub header */
 #include "win32_glibstubs.h"
 
 #include <errno.h>

@@ -116,32 +116,65 @@ typedef pthread_mutex_t GStaticRecMutex;
 #define g_static_rec_mutex_lock(_m) pthread_mutex_lock(_m)
 #define g_static_rec_mutex_unlock(_m) pthread_mutex_unlock(_m)
 void fluid_static_rec_mutex_init(pthread_mutex_t *m);
-
 /* Dynamically allocated mutex suitable for fluid_cond_t use */
 typedef pthread_mutex_t GMutex;
-#define g_mutex_free(m) do { if (m != NULL) { pthread_mutex_destroy(m); g_free(m); } } while(0)
-#define g_mutex_lock(m) pthread_mutex_lock(m)
-#define g_mutex_unlock(m) pthread_mutex_unlock(m)
-
+static inline void g_mutex_init(GMutex *m) { pthread_mutex_init(m, NULL); }
+static inline void g_mutex_clear(GMutex *m) { pthread_mutex_destroy(m); }
 static inline GMutex *g_mutex_new(void)
 {
     GMutex *mutex = g_new(GMutex, 1);
-    if (mutex) pthread_mutex_init(mutex, NULL);
+    if (mutex) g_mutex_init(mutex);
     return mutex;
 }
+static inline void g_mutex_free(GMutex *m)
+{
+    if (m != NULL) { pthread_mutex_destroy(m); g_free(m); }
+}
+#define g_mutex_lock(m) pthread_mutex_lock(m)
+#define g_mutex_unlock(m) pthread_mutex_unlock(m)
 
-/* Thread condition signaling */
+/* Recursive mutex API (fluid_rec_mutex_t) */
+#define g_rec_mutex_init(m) fluid_static_rec_mutex_init(m)
+#define g_rec_mutex_clear(m) do {} while (0)
+#define g_rec_mutex_lock(m) pthread_mutex_lock(m)
+#define g_rec_mutex_unlock(m) pthread_mutex_unlock(m)
+
+/* Thread condition signaling.
+ * Implemented as inline functions: macros would substitute the parameter
+ * into the struct member name (`->cond`) and corrupt expressions like
+ * g_cond_signal(mixer->thread_ready). */
 typedef struct { pthread_cond_t cond; } GCond;
-#define g_cond_free(cond) do { if (cond != NULL) { pthread_cond_destroy(&(cond)->cond); g_free(cond); } } while (0)
-#define g_cond_signal(cond) pthread_cond_signal(&(cond)->cond)
-#define g_cond_broadcast(cond) pthread_cond_broadcast(&(cond)->cond)
-#define g_cond_wait(cond, mutex) pthread_cond_wait(&(cond)->cond, mutex)
 
 static inline GCond *g_cond_new(void)
 {
     GCond *cond = g_new(GCond, 1);
     if (cond) pthread_cond_init(&cond->cond, NULL);
     return cond;
+}
+
+static inline void g_cond_clear(GCond *cond)
+{
+    if (cond != NULL) pthread_cond_destroy(&cond->cond);
+}
+
+static inline void g_cond_free(GCond *cond)
+{
+    if (cond != NULL) { pthread_cond_destroy(&cond->cond); g_free(cond); }
+}
+
+static inline int g_cond_signal(GCond *cond)
+{
+    return pthread_cond_signal(&cond->cond);
+}
+
+static inline int g_cond_broadcast(GCond *cond)
+{
+    return pthread_cond_broadcast(&cond->cond);
+}
+
+static inline void g_cond_wait(GCond *cond, pthread_mutex_t *mutex)
+{
+    pthread_cond_wait(&cond->cond, mutex);
 }
 
 /* Thread private data */
@@ -158,8 +191,14 @@ static inline void fluid_key_destroy(void *v) { (void)v; }
 #define g_atomic_int_get(_pi) __atomic_load_n(_pi, __ATOMIC_SEQ_CST)
 #define g_atomic_int_set(_pi, _val) __atomic_store_n(_pi, _val, __ATOMIC_SEQ_CST)
 #define g_atomic_int_dec_and_test(_pi) (__atomic_sub_fetch(_pi, 1, __ATOMIC_SEQ_CST) == 0)
-#define g_atomic_int_compare_and_exchange(_pi, _old, _new) \
-    (__atomic_compare_exchange_n(_pi, (_old), (_new), 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST))
 #define g_atomic_int_exchange_and_add(_pi, _add) __atomic_fetch_add(_pi, _add, __ATOMIC_SEQ_CST)
+static inline int g_atomic_int_compare_and_exchange(int *pi, int oldval, int newval)
+{
+    /* __atomic_compare_exchange_n updates *expected; use a temp so the
+     * caller-visible semantics match glib (old/new passed by value). */
+    int expected = oldval;
+    return __atomic_compare_exchange_n(pi, &expected, newval, 0,
+                                       __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
 
 #endif /* !_GLIBSTUBS_H */
