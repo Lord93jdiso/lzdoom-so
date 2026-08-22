@@ -57,4 +57,23 @@ if "WITH_GLIB_STUBS" not in text:
 with open(cm_path, "w") as f:
     f.write(text)
 
+# config.h bug: HAVE_WINDOWS_H is defined unconditionally, which drags the
+# Windows-only GStatBuf fallback into Android builds (bionic also macros
+# st_mtime). Guard it properly.
+config_h_path = os.path.join(zmusic, "thirdparty", "fluidsynth", "src", "config.h")
+with open(config_h_path) as f:
+    config_h = f.read()
+
+old_windows = """/* Define to 1 if you have the <windows.h> header file. */
+#define HAVE_WINDOWS_H 1"""
+new_windows = """/* Define to 1 if you have the <windows.h> header file. */
+#ifdef _WIN32
+#define HAVE_WINDOWS_H 1
+#endif"""
+assert old_windows in config_h, "HAVE_WINDOWS_H block not found in config.h"
+config_h = config_h.replace(old_windows, new_windows)
+
+with open(config_h_path, "w") as f:
+    f.write(config_h)
+
 print("ZMusic patched for Android")
