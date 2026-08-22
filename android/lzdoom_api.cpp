@@ -8,7 +8,7 @@
 #ifdef __ANDROID__
 
 #define SDL_MAIN_HANDLED
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include <locale.h>
 #include <stdlib.h>
 #include <unistd.h>
