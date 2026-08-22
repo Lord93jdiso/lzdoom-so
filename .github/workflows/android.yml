@@ -79,6 +79,9 @@ jobs:
           cmake --install $WORK/../sdl-build --prefix $WORK/../sdl-stage
 
       # ---------- ZMusic for Android ----------
+      - name: Patch ZMusic for Android (glib stubs)
+        run: python3 android/patch_zmusic.py $WORK/../zmusic-src
+
       - name: Build ZMusic (static, ${{ matrix.abi }})
         run: |
           cmake -S $WORK/../zmusic-src -B $WORK/../zmusic-build -GNinja \
