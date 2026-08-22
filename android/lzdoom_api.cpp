@@ -43,7 +43,7 @@ void lzdoom_set_files_dir(const char* dir)
 __attribute__((visibility("default")))
 int SDL_main(int argc, char** argv)
 {
-	return lzdoom_main(argc, argv, g_filesDir.c_str());
+	return lzdoom_main(argc, const_cast<const char**>(argv), g_filesDir.c_str());
 }
 
 __attribute__((visibility("default")))
