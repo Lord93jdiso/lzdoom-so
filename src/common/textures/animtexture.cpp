@@ -35,7 +35,9 @@
 #include "bitmap.h"
 #include "texturemanager.h"
 
+#ifdef USE_LIBVPX
 #include "vpx/vpx_image.h"
+#endif
 
 
 //==========================================================================
@@ -88,6 +90,7 @@ void AnimTexture::SetFrame(const uint8_t* Palette, const void* data_)
 		}
 		else if(pixelformat == VPX)
 		{
+#ifdef USE_LIBVPX
 			const vpx_image_t *img = reinterpret_cast<const vpx_image_t *>(data_);
 			
 			uint8_t const* const yplane = img->planes[VPX_PLANE_Y];
@@ -163,6 +166,7 @@ void AnimTexture::SetFrame(const uint8_t* Palette, const void* data_)
 					}
 				}
 			}
+#endif // USE_LIBVPX
 		}
 		else if(pixelformat == RGB)
 		{
