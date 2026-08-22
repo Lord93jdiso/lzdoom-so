@@ -122,7 +122,7 @@ jobs:
         run: |
           mkdir -p dist/${{ matrix.abi }}
           $NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
-            build/liblzdoom.so -o dist/${{ matrix.abi }}/liblzdoom.so
+            build/src/liblzdoom.so -o dist/${{ matrix.abi }}/liblzdoom.so
           cp build/*.pk3 dist/${{ matrix.abi }}/ 2>/dev/null || true
           ls -la dist/${{ matrix.abi }}
 
