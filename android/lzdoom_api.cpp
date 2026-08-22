@@ -29,6 +29,8 @@ extern "C"
 // before SDL starts the engine thread).
 static std::string g_filesDir;
 
+int lzdoom_main(int argc, const char** argv, const char* files_dir);
+
 __attribute__((visibility("default")))
 void lzdoom_set_files_dir(const char* dir)
 {
