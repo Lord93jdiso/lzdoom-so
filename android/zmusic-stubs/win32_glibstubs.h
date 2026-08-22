@@ -26,6 +26,12 @@ typedef struct
 } GError;
 typedef void *gpointer;
 
+#ifndef TRUE
+#define TRUE 1
+#define FALSE 0
+#endif
+typedef int BOOL;
+
 #define g_new(s, c) FLUID_ARRAY(s, c)
 #define g_free(p) FLUID_FREE(p)
 #define g_strfreev FLUID_FREE
