@@ -105,7 +105,10 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=$ABI -DANDROID_PLATFORM=android-$API_LEVEL \
             -DANDROID_STL=c++_static \
+            -DCMAKE_FIND_ROOT_PATH_MODE_LIBRARY=BOTH \
+            -DCMAKE_FIND_ROOT_PATH_MODE_INCLUDE=BOTH \
             -DFORCE_CROSSCOMPILE=ON \
+            -DFORCE_INTERNAL_BZIP2=ON \
             -DIMPORT_EXECUTABLES=$WORK/native-build/ImportExecutables.cmake \
             -DHAVE_VULKAN=OFF -DHAVE_GLES2=ON \
             -DNO_GTK=ON -DDYN_OPENAL=ON \
