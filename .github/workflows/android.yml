@@ -39,10 +39,26 @@ jobs:
           echo "NDK=${{ steps.ndk.outputs.ndk-path }}" >> $GITHUB_ENV
           echo "WORK=$GITHUB_WORKSPACE" >> $GITHUB_ENV
 
+      # ---------- ZMusic sources (used by host + Android builds) ----------
+      - name: Clone ZMusic
+        run: git clone --depth 1 https://github.com/coelckers/ZMusic.git $WORK/../zmusic-src
+
+      - name: Build ZMusic for host (native tools need it)
+        run: |
+          cmake -S $WORK/../zmusic-src -B $WORK/../zmusic-host-build \
+            -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=OFF
+          cmake --build $WORK/../zmusic-host-build --parallel $(nproc)
+          mkdir -p $WORK/../zmusic-host-stage/lib
+          cp $WORK/../zmusic-src/include/zmusic.h $WORK/../zmusic-host-stage/
+          find $WORK/../zmusic-host-build -name 'libzmusic*.a' ! -name '*lite*' \
+            -exec cp {} $WORK/../zmusic-host-stage/lib/libzmusic.a \;
+
       # ---------- Native tools (zipdir) ----------
       - name: Build native tools
         run: |
-          cmake -S . -B native-build -GNinja -DCMAKE_BUILD_TYPE=Release -DHAVE_VULKAN=OFF
+          cmake -S . -B native-build -GNinja -DCMAKE_BUILD_TYPE=Release -DHAVE_VULKAN=OFF \
+            -DZMUSIC_INCLUDE_DIR=$WORK/../zmusic-host-stage \
+            -DZMUSIC_LIBRARIES="$WORK/../zmusic-host-stage/lib/libzmusic.a"
           cmake --build native-build --target zipdir --parallel $(nproc)
 
       # ---------- SDL2 for Android ----------
@@ -65,7 +81,6 @@ jobs:
       # ---------- ZMusic for Android ----------
       - name: Build ZMusic (static, ${{ matrix.abi }})
         run: |
-          git clone --depth 1 https://github.com/coelckers/ZMusic.git $WORK/../zmusic-src
           cmake -S $WORK/../zmusic-src -B $WORK/../zmusic-build -GNinja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
