@@ -1,0 +1,132 @@
+name: Build Android .so
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [ arm64-v8a, armeabi-v7a ]
+
+    env:
+      ABI: ${{ matrix.abi }}
+      API_LEVEL: 24
+
+    steps:
+      - name: Checkout LZDoom
+        uses: actions/checkout@v4
+
+      - name: Install host dependencies (native tools)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libsdl2-dev libopenal-dev \
+            zlib1g-dev libbz2-dev libjpeg-dev libvpx-dev
+
+      - name: Setup Android NDK
+        id: ndk
+        uses: nttld/setup-ndk@v1
+        with:
+          ndk-version: r27c
+          add-to-path: false
+
+      - name: Set environment
+        run: |
+          echo "NDK=${{ steps.ndk.outputs.ndk-path }}" >> $GITHUB_ENV
+          echo "WORK=$GITHUB_WORKSPACE" >> $GITHUB_ENV
+
+      # ---------- Native tools (zipdir) ----------
+      - name: Build native tools
+        run: |
+          cmake -S . -B native-build -GNinja -DCMAKE_BUILD_TYPE=Release -DHAVE_VULKAN=OFF
+          cmake --build native-build --target zipdir --parallel $(nproc)
+
+      # ---------- SDL2 for Android ----------
+      - name: Build SDL2 (static, ${{ matrix.abi }})
+        run: |
+          SDL_TAG=$(git ls-remote --tags https://github.com/libsdl-org/SDL.git 'release-2.*' \
+                    | sed 's/.*refs\/tags\///' | sort -V | tail -1)
+          echo "Using SDL tag: $SDL_TAG"
+          git clone --depth 1 --branch "$SDL_TAG" https://github.com/libsdl-org/SDL.git $WORK/../sdl-src
+          cmake -S $WORK/../sdl-src -B $WORK/../sdl-build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=$ABI -DANDROID_PLATFORM=android-$API_LEVEL \
+            -DANDROID_STL=c++_static \
+            -DSDL_SHARED=OFF -DSDL_STATIC=ON -DSDL_STATIC_PIC=ON \
+            -DSDL_TESTS=OFF -DSDL_EXAMPLES=OFF
+          cmake --build $WORK/../sdl-build --parallel $(nproc)
+          cmake --install $WORK/../sdl-build --prefix $WORK/../sdl-stage
+
+      # ---------- ZMusic for Android ----------
+      - name: Build ZMusic (static, ${{ matrix.abi }})
+        run: |
+          git clone --depth 1 https://github.com/coelckers/ZMusic.git $WORK/../zmusic-src
+          cmake -S $WORK/../zmusic-src -B $WORK/../zmusic-build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=$ABI -DANDROID_PLATFORM=android-$API_LEVEL \
+            -DANDROID_STL=c++_static \
+            -DBUILD_SHARED_LIBS=OFF
+          cmake --build $WORK/../zmusic-build --parallel $(nproc)
+          mkdir -p $WORK/../zmusic-stage/lib
+          cp $WORK/../zmusic-src/include/zmusic.h $WORK/../zmusic-stage/
+          find $WORK/../zmusic-build -name 'libzmusic*.a' ! -name '*lite*' \
+            -exec cp {} $WORK/../zmusic-stage/lib/libzmusic.a \;
+
+      # ---------- LZDoom engine as shared library ----------
+      - name: Configure LZDoom (${{ matrix.abi }})
+        run: |
+          export SDL2DIR=$WORK/../sdl-stage
+          cmake -S . -B build -GNinja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=$NDK/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=$ABI -DANDROID_PLATFORM=android-$API_LEVEL \
+            -DANDROID_STL=c++_static \
+            -DFORCE_CROSSCOMPILE=ON \
+            -DIMPORT_EXECUTABLES=$WORK/native-build/ImportExecutables.cmake \
+            -DHAVE_VULKAN=OFF -DHAVE_GLES2=ON \
+            -DNO_GTK=ON -DDYN_OPENAL=ON \
+            -DZMUSIC_INCLUDE_DIR=$WORK/../zmusic-stage \
+            -DZMUSIC_LIBRARIES="$WORK/../zmusic-stage/lib/libzmusic.a"
+
+      - name: Build LZDoom (${{ matrix.abi }})
+        run: cmake --build build --parallel $(nproc)
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist/${{ matrix.abi }}
+          $NDK/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip \
+            build/liblzdoom.so -o dist/${{ matrix.abi }}/liblzdoom.so
+          cp build/*.pk3 dist/${{ matrix.abi }}/ 2>/dev/null || true
+          ls -la dist/${{ matrix.abi }}
+
+      - name: Upload artifact (${{ matrix.abi }})
+        uses: actions/upload-artifact@v4
+        with:
+          name: lzdoom-android-${{ matrix.abi }}
+          path: dist/
+
+  package-all:
+    needs: build-android
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Package all ABIs
+        run: |
+          cd artifacts
+          zip -r ../lzdoom-android-so.zip .
+
+      - name: Upload combined package
+        uses: actions/upload-artifact@v4
+        with:
+          name: lzdoom-android-all
+          path: lzdoom-android-so.zip

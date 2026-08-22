@@ -1,0 +1,43 @@
+[Desktop Entry]
+Name=LZDoom
+Comment=Multi-game launcher for Doom era games
+Icon=org.zdoom.LZDoom
+Categories=Game;Shooter;
+Exec=lzdoom %F
+StartupNotify=true
+PrefersNonDefaultGPU=true
+Terminal=false
+Type=Application
+Keywords=Doom;Heretic;Hexen;strife;pwad;iwad;first;person;shooter;
+MimeType=application/x-doom-wad;application/x-doom-pk7;application/x-doom-pk3;
+Actions=launch-safemode;launch-doom-1;launch-doom-2;launch-heretic;launch-hexen;launch-strife;
+
+[Desktop Action launch-safemode]
+Name=LZDoom Safemode
+Icon=org.zdoom.LZDoom
+Exec=lzdoom -noautoload -noautoexec %F
+
+[Desktop Action launch-doom-1]
+Name=Launch Doom
+Icon=org.zdoom.LZDoom
+Exec=lzdoom -iwad DOOM.WAD %F
+
+[Desktop Action launch-doom-2]
+Name=Launch Doom 2
+Icon=org.zdoom.LZDoom
+Exec=lzdoom -iwad DOOM2.WAD %F
+
+[Desktop Action launch-heretic]
+Name=Launch Heretic
+Icon=org.zdoom.LZDoom
+Exec=lzdoom -iwad HERETIC.WAD %F
+
+[Desktop Action launch-hexen]
+Name=Launch Hexen
+Icon=org.zdoom.LZDoom
+Exec=lzdoom -iwad HEXEN.WAD %F
+
+[Desktop Action launch-strife]
+Name=Launch Strife
+Icon=org.zdoom.LZDoom
+Exec=lzdoom -iwad STRIFE1.WAD %F
