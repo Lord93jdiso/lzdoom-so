@@ -48,6 +48,9 @@ typedef void *gpointer;
 int fluid_g_file_test(const char *path, int flags);
 int fluid_g_shell_parse_argv(const char *command_line, int *argcp, char ***argvp, void *dummy);
 
+/* gstdio subset used by FluidSynth */
+#define g_stat stat
+
 #define g_get_monotonic_time fluid_g_get_monotonic_time
 double fluid_g_get_monotonic_time(void);
 

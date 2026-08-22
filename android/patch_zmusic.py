@@ -29,6 +29,23 @@ new_glib_block = "if (NOT WIN32 AND NOT ANDROID)\n   find_package(PkgConfig REQU
 assert old_glib_block in text, "glib pkg-config block not found"
 text = text.replace(old_glib_block, new_glib_block)
 
+# fluid_sys.h: skip <glib/gstdio.h> on Android and pull in the stub header instead.
+sys_h_path = os.path.join(utils_dir, "fluid_sys.h")
+with open(sys_h_path) as f:
+    sys_h = f.read()
+
+old_gstdio = "#ifndef WIN32\n#include <glib/gstdio.h>\n#endif"
+new_gstdio = """#if !defined(WIN32) && !defined(__ANDROID__)
+#include <glib/gstdio.h>
+#elif defined(__ANDROID__) && defined(WITH_GLIB_STUBS)
+#include "win32_glibstubs.h"
+#endif"""
+assert old_gstdio in sys_h, "fluid_sys.h gstdio include not found"
+sys_h = sys_h.replace(old_gstdio, new_gstdio)
+
+with open(sys_h_path, "w") as f:
+    f.write(sys_h)
+
 if "WITH_GLIB_STUBS" not in text:
     text += (
         "\nif(ANDROID)\n"
