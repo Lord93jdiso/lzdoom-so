@@ -53,13 +53,13 @@ jobs:
           find $WORK/../zmusic-host-build -name 'libzmusic*.a' ! -name '*lite*' \
             -exec cp {} $WORK/../zmusic-host-stage/lib/libzmusic.a \;
 
-      # ---------- Native tools (zipdir) ----------
+      # ---------- Native tools (zipdir, re2c, lemon) ----------
       - name: Build native tools
         run: |
           cmake -S . -B native-build -GNinja -DCMAKE_BUILD_TYPE=Release -DHAVE_VULKAN=OFF \
             -DZMUSIC_INCLUDE_DIR=$WORK/../zmusic-host-stage \
             -DZMUSIC_LIBRARIES="$WORK/../zmusic-host-stage/lib/libzmusic.a"
-          cmake --build native-build --target zipdir --parallel $(nproc)
+          cmake --build native-build --target zipdir re2c lemon --parallel $(nproc)
 
       # ---------- SDL2 for Android ----------
       - name: Build SDL2 (static, ${{ matrix.abi }})
