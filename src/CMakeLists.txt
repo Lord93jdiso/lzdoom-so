@@ -1359,7 +1359,9 @@ if(ANDROID)
 	target_link_libraries( zdoom android log EGL GLESv2 GLESv1_CM dl OpenSLES )
 	# Static ZMusic bundles its own copy of FModule (i_module.cpp); identical
 	# implementation, so let the engine's copy win instead of erroring out.
-	target_link_options( zdoom PRIVATE -Wl,--allow-multiple-definition )
+	# -static-openmp: some bundled code references libomp; resolve it statically
+	# so the .so has no DT_NEEDED on libomp.so (absent on devices).
+	target_link_options( zdoom PRIVATE -Wl,--allow-multiple-definition -fopenmp -static-openmp )
 	set_target_properties( zdoom PROPERTIES
 		OUTPUT_NAME "lzdoom"
 		C_VISIBILITY_PRESET hidden
